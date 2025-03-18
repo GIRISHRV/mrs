@@ -511,3 +511,19 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn?.addEventListener('click', handleLogout);
     dropdownLogoutBtn?.addEventListener('click', handleLogout);
 });
+
+function toggleSidebar() {
+    const sidebar = document.getElementById("mySidebar");
+    const mainContent = document.getElementById("main-content");
+    const overlay = document.querySelector(".sidebar-overlay");
+    
+    if (sidebar.classList.contains("active")) {
+        sidebar.classList.remove("active");
+        mainContent.classList.remove("shifted");
+        overlay.style.display = "none";
+    } else {
+        sidebar.classList.add("active");
+        mainContent.classList.add("shifted");
+        overlay.style.display = "block";
+    }
+}

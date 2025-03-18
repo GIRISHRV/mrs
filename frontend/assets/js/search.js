@@ -1,6 +1,8 @@
 class SearchPage {
     constructor() {
-        this.query = new URLSearchParams(window.location.search).get('q');
+        // Get query from 'query' or 'q' parameter for compatibility
+        this.query = new URLSearchParams(window.location.search).get('query') 
+                  || new URLSearchParams(window.location.search).get('q');
         this.currentPage = parseInt(new URLSearchParams(window.location.search).get('page') || '1');
         
         this.searchTitle = document.getElementById('search-title');
@@ -19,16 +21,7 @@ class SearchPage {
     
     async init() {
         if (!this.query) {
-            if (this.searchTitle) {
-                this.searchTitle.textContent = "Search Movies";
-            }
-            if (this.searchResults) {
-                this.searchResults.innerHTML = `
-                    <div class="col-12 text-center">
-                        <div class="alert alert-info">Enter a search term to find movies</div>
-                    </div>
-                `;
-            }
+            this.showEmptyState();
             return;
         }
         
@@ -175,6 +168,38 @@ class SearchPage {
                 </div>
             `;
         }
+    }
+
+    showEmptyState() {
+        if (this.searchTitle) {
+            this.searchTitle.textContent = "Search Movies";
+        }
+        if (this.searchResults) {
+            this.searchResults.innerHTML = `
+                <div class="col-12 text-center">
+                    <div class="alert alert-info">Enter a search term to find movies</div>
+                </div>
+            `;
+        }
+        if (this.searchInfo) {
+            this.searchInfo.textContent = '';
+        }
+    }
+}
+
+function toggleSidebar() {
+    const sidebar = document.getElementById("mySidebar");
+    const mainContent = document.getElementById("main-content");
+    const overlay = document.querySelector(".sidebar-overlay");
+    
+    if (sidebar.classList.contains("active")) {
+        sidebar.classList.remove("active");
+        mainContent.classList.remove("shifted");
+        overlay.style.display = "none";
+    } else {
+        sidebar.classList.add("active");
+        mainContent.classList.add("shifted");
+        overlay.style.display = "block";
     }
 }
 

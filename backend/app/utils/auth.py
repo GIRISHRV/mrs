@@ -58,3 +58,26 @@ async def get_current_user(
         raise credentials_exception
         
     return user
+
+async def get_current_user_optional(
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    """Optional user dependency that doesn't raise an error if no token is provided"""
+    if not token:
+        return None
+        
+    try:
+        payload = jwt.decode(
+            token,
+            os.getenv("SECRET_KEY"),
+            algorithms=[os.getenv("ALGORITHM")]
+        )
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+            
+        user = db.query(User).filter(User.email == email).first()
+        return user
+    except JWTError:
+        return None

@@ -14,180 +14,85 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="../assets/css/style.css">
     <script src="../assets/js/global.js"></script>
-    <style>
-        body {
-            background-color: #141414;
-        }
-    </style>
 </head>
-<body>
-    <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="../index.html">UFlix</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="../index.html">Home</a>
-                    </li>
-                    <li class="nav-item auth-required">
-                        <a class="nav-link" href="your-space.html">Your Space</a>
-                    </li>
-                    <li class="nav-item auth-required">
-                        <a class="nav-link" href="profile.html">Profile</a>
-                    </li>
-                </ul>
-                <div class="ms-3 d-none" id="user-info">
-                    <div class="dropdown">
-                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
-                            <span id="username">User</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="profile.html">Profile</a></li>
-                            <li><a class="dropdown-item" href="preferences.html">Preferences</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" id="logout-btn">Logout</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
+<body class="text-white">
+    <!-- Sidebar -->
+    <div id="mySidebar" class="sidebar">
+        <a href="javascript:void(0)" class="close-btn" onclick="toggleSidebar()">&times;</a>
+        <a class="navbar-brand mb-4 ms-4" href="../index.html">UFlix</a>
+        <a href="../index.html"><i class="fas fa-home me-2"></i>Home</a>
+        <a href="your-space.html" class="auth-required"><i class="fas fa-film me-2"></i>Your Space</a>
+        <a href="profile.html" class="auth-required active"><i class="fas fa-user me-2"></i>Profile</a>
+    </div>
+
+    <!-- Overlay -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <nav class="top-navbar">
+        <button class="sidebar-toggle" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <div class="search-container">
+            
         </div>
     </nav>
 
     <!-- Main Content -->
-    <div class="container py-5 auth-required">
-        <div class="row justify-content-center">
-            <!-- User Profile Card -->
-            <div class="col-md-6 col-lg-4">
-                <div class="card shadow mb-4">
-                    <div class="card-body text-center">
-                        <img src="https://via.placeholder.com/150" 
-                             alt="Profile" 
-                             class="user-avatar rounded-circle mb-4"
-                             style="width: 150px; height: 150px; object-fit: cover;"
-                             onerror="this.src='../assets/images/avatars/default.png'">
-                        <h3 id="profile-username" class="mb-2">Username</h3>
-                        <p class="text-muted mb-4" id="profile-email">user@example.com</p>
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-danger" id="profile-logout-btn">
-                                <i class="fas fa-sign-out-alt me-2"></i>Logout
-                            </button>
+    <div id="main-content">
+        <div class="container py-5 auth-required">
+            <div class="row justify-content-center">
+                <!-- User Profile Card -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="card bg-dark border-secondary shadow mb-4">
+                        <div class="card-body text-center">
+                            <img src="https://via.placeholder.com/150" 
+                                 alt="Profile" 
+                                 class="user-avatar rounded-circle mb-4"
+                                 style="width: 150px; height: 150px; object-fit: cover;"
+                                 onerror="this.src='../assets/images/avatars/default.png'">
+                            <h3 id="profile-username" class="mb-2 text-white">Username</h3>
+                            <p class="text-muted mb-4" id="profile-email">user@example.com</p>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-danger" id="profile-logout-btn">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
             </div>
         </div>
+
+        <!-- Footer -->
+        <footer class="bg-dark text-white py-4 mt-5">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>UFlix</h5>
+                        <p>Your personalized movie recommendation platform.</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h5>Links</h5>
+                        <ul class="list-unstyled">
+                            <li><a href="#" class="text-white">Home</a></li>
+                            <li><a href="pages/profile.html" class="text-white">Profile</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-3">
+                        <h5>Powered By</h5>
+                        <p>TMDB API</p>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12 text-center">
+                        <p class="mb-0">© 2025 UFlix. All rights reserved.</p>
+                    </div>
+                </div>
+            </div>
+        </footer>
     </div>
 
-
-    <!-- Footer -->
-    <footer class="bg-dark text-white py-4 mt-5">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <h5>UFlix</h5>
-                    <p>Your personalized movie recommendation platform.</p>
-                </div>
-                <div class="col-md-3">
-                    <h5>Links</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="../index.html" class="text-white">Home</a></li>
-                        <li><a href="profile.html" class="text-white">Profile</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-3">
-                    <h5>Powered By</h5>
-                    <p>TMDB API</p>
-                </div>
-            </div>
-            <div class="row mt-3">
-                <div class="col-12 text-center">
-                    <p class="mb-0">© 2025 UFlix. All rights reserved.</p>
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Add to all pages -->
-<div class="modal fade" id="loginModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Login</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="login-form">
-                    <div class="mb-3">
-                        <label for="login-email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="login-email" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="login-password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="login-password" required>
-                    </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">Login</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="registerModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Register</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="register-form">
-                    <div class="mb-3">
-                        <label for="register-username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="register-username" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="register-email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="register-email" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="register-password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="register-password" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="register-confirm-password" class="form-label">Confirm Password</label>
-                        <input type="password" class="form-control" id="register-confirm-password" required>
-                    </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">Register</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="avatarModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Choose Avatar</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="avatar-grid" id="avatar-grid">
-                    <!-- Will be populated by JavaScript -->
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
     <!-- These would be identical to the modals in other pages -->
 
@@ -196,6 +101,7 @@
     
     <!-- Custom JS -->
     <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/auth.guard.js"></script>
     <script src="../assets/js/auth.js"></script>
     <script src="../assets/js/profile.js"></script>
 </body>

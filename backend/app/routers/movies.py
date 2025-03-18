@@ -1,17 +1,34 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Set
 from app.models.database import get_db
 from app.models.user import User
-from app.models.movie import Movie, Genre
+from app.models.movie import Movie, Genre, watch_history  # Add watch_history import
 from app.services.tmdb_service import tmdb_service
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, get_current_user_optional
 from app.schemas.schemas import MovieResponse, GenreResponse
 from datetime import datetime
 import logging
+import math
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/movies", tags=["Movies"])
-logger = logging.getLogger(__name__)
+
+# Add this function at the top level of the file
+def get_user_watch_history(user_id: int, db: Session = Depends(get_db)) -> Set[int]:
+    """Get a set of movie IDs that the user has watched"""
+    try:
+        # Query the watch_history association table
+        watched = db.query(watch_history).filter(
+            watch_history.c.user_id == user_id
+        ).all()
+        
+        # Return a set of movie IDs
+        return {w.movie_id for w in watched}
+    except Exception as e:
+        logger.error(f"Error getting user watch history: {str(e)}")
+        return set()
 
 @router.get("/popular", response_model=List[MovieResponse])
 async def get_popular_movies(
@@ -190,18 +207,17 @@ from ..services.tmdb_service import tmdb_service
 router = APIRouter(prefix="/movies", tags=["movies"])
 
 @router.get("/popular")
-async def get_popular_movies(page: int = 1):
+async def get_popular_movies(page: int = Query(1, ge=1)):
     try:
-        print(f"Fetching popular movies for page {page}")
         response = tmdb_service.get_popular_movies(page)
-        print(f"TMDB Response: {response}")
         
-        # Return only the results array
         return {
-            "movies": response.get("results", [])
+            "movies": response.get("results", []),
+            "current_page": response.get("page", 1),
+            "total_pages": response.get("total_pages", 1),
+            "total_results": response.get("total_results", 0)
         }
     except Exception as e:
-        print(f"Error in get_popular_movies: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/genres")
@@ -312,31 +328,35 @@ async def get_movie_details(movie_id: int):
         logger.error(f"Error in get_movie_details: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Update the similar movies endpoint to use DB session
 @router.get("/{movie_id}/similar")
 async def get_similar_movies(
-    movie_id: int,
+    movie_id: int, 
+    page: int = Query(1, ge=1),
     limit: int = Query(8, ge=1, le=20),
-    current_user: User = Depends(get_current_user)  # Add auth requirement
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)  # Add DB session
 ):
-    """Get similar movies based on a movie ID"""
     try:
-        logger.info(f"Getting similar movies for movie_id: {movie_id}, limit: {limit}")
+        # Get data from TMDB with pagination
+        response = tmdb_service.get_similar_movies(movie_id, page)
         
-        # Call TMDB service to get similar movies
-        response = tmdb_service.get_similar_movies(movie_id)
+        # Get results and apply limit
+        results = response.get("results", [])[:limit]
+        total_results = response.get("total_results", 0)
         
-        if not response or "results" not in response:
-            logger.warning(f"No similar movies found for movie_id: {movie_id}")
-            return {"movies": []}
+        # If user is authenticated, add watch status
+        if current_user:
+            watched_movies = get_user_watch_history(current_user.id, db)  # Pass db session
+            for movie in results:
+                movie["is_watched"] = movie["id"] in watched_movies
         
-        # Filter results and limit
-        movies = [
-            movie for movie in response.get("results", [])
-            if movie.get("poster_path") and movie.get("release_date")
-        ][:limit]
-        
-        logger.info(f"Found {len(movies)} similar movies")
-        return {"movies": movies}
+        return {
+            "results": results,
+            "page": page,
+            "total_pages": math.ceil(total_results / limit),
+            "total_results": total_results
+        }
         
     except Exception as e:
         logger.error(f"Error getting similar movies: {str(e)}")

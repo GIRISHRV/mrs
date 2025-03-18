@@ -5,7 +5,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from app.models.user import User
-from app.models.movie import Movie
+from app.models.movie import Movie, watch_history  # Add this import
+import logging
+
+logger = logging.getLogger(__name__)
 
 class RecommendationService:
     """Service for generating movie recommendations using different algorithms"""
@@ -110,36 +113,47 @@ class RecommendationService:
     
     def get_recommendations_for_user(self, user: User, limit: int = 10, db: Session = None) -> List[Movie]:
         """Get personalized recommendations based on user's watch history"""
-        if not user.watch_history:
-            return self.get_popular_movies(limit)
-        
-        # Get user's recently watched movies
-        recent_movies = (
-            db.query(Movie)
-            .join(watch_history)
-            .filter(watch_history.c.user_id == user.id)
-            .order_by(watch_history.c.watched_at.desc())
-            .limit(5)
-            .all()
-        )
-        
-        # Get similar movies based on watch history
-        recommendations = []
-        for movie in recent_movies:
-            similar_movies = self._content_based_recommendations(
-                movie.tmdb_id,
-                limit=3  # Get top 3 similar movies for each watched movie
+        try:
+            # Get user's watch history
+            watched_movies = (
+                db.query(Movie)
+                .join(watch_history)
+                .filter(watch_history.c.user_id == user.id)
+                .all()
             )
-            recommendations.extend(similar_movies)
-        
-        # Remove duplicates and already watched movies
-        watched_ids = {m.id for m in user.watch_history}
-        unique_recommendations = []
-        seen = set()
-        
-        for movie in recommendations:
-            if movie.id not in watched_ids and movie.id not in seen:
-                unique_recommendations.append(movie)
-                seen.add(movie.id)
-        
-        return unique_recommendations[:limit]
+            if not watched_movies:
+                return self.get_popular_movies(limit)
+            
+            # Get user's recently watched movies
+            recent_movies = (
+                db.query(Movie)
+                .join(watch_history)
+                .filter(watch_history.c.user_id == user.id)
+                .order_by(watch_history.c.watched_at.desc())
+                .limit(5)
+                .all()
+            )
+            
+            # Get similar movies based on watch history
+            recommendations = []
+            for movie in recent_movies:
+                similar_movies = self._content_based_recommendations(
+                    movie.tmdb_id,
+                    limit=3  # Get top 3 similar movies for each watched movie
+                )
+                recommendations.extend(similar_movies)
+            
+            # Remove duplicates and already watched movies
+            watched_ids = {m.id for m in user.watch_history}
+            unique_recommendations = []
+            seen = set()
+            
+            for movie in recommendations:
+                if movie.id not in watched_ids and movie.id not in seen:
+                    unique_recommendations.append(movie)
+                    seen.add(movie.id)
+            
+            return unique_recommendations[:limit]
+        except Exception as e:
+            logger.error(f"Error getting recommendations for user {user.id}: {e}")
+            return []

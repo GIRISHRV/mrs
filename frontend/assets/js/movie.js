@@ -5,63 +5,183 @@
 
 class MoviePage {
     constructor() {
-        this.movieId = new URLSearchParams(window.location.search).get('id');
-        this.movieDetailsContainer = document.getElementById('movie-details-container');
-        this.similarMoviesContainer = document.getElementById('similar-movies');
-        
-        // Add authentication state check
-        this.isAuthenticated = !!localStorage.getItem('token');
-        
+        this.movieId = this.getMovieIdFromUrl();
         if (!this.movieId) {
-            console.error('No movie ID provided');
+            console.error('No movie ID found in URL');
             this.showError('Invalid movie ID');
             return;
         }
 
-        console.log('MoviePage initialized with ID:', this.movieId);
-        if (this.movieId) {
-            this.init();
-            this.addLoadingStates();
+        // Initialize container references
+        this.movieDetailsContainer = document.getElementById('movie-details');
+        this.similarMoviesContainer = document.getElementById('similar-movies');
+
+        if (!this.movieDetailsContainer) {
+            console.error('Movie details container not found');
+            return;
         }
+
+        this.hasWatched = false;
+        this.loadingState = {
+            details: true,
+            similar: true,
+            watchState: true
+        };
+        
+        this.isAuthenticated = this.checkAuthStatus();
+        this.init();
+    }
+
+    getMovieIdFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('id');
     }
 
     async init() {
         try {
-            await this.loadMovieDetails();
+            await this.checkWatchStatus(); // Check watch status first
+            
+            // Show loading states with delay
+            setTimeout(() => {
+                if (!this.movieDetailsContainer.querySelector('.movie-content')) {
+                    this.showLoadingState();
+                }
+            }, 300);
+            
+            // Load content
+            const [movieDetails, similarMovies] = await Promise.all([
+                this.loadMovieDetails(),
+                this.loadSimilarMovies()
+            ]);
+            
         } catch (error) {
             console.error('Error initializing movie page:', error);
             this.showError('Failed to load movie details');
         }
     }
 
+    showLoadingState() {
+        if (this.loadingState.details && this.movieDetailsContainer) {
+            // Only show loading if no content exists
+            if (!this.movieDetailsContainer.querySelector('.movie-content')) {
+                this.movieDetailsContainer.innerHTML = `
+                    <div class="loading-state">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-3">Loading movie details...</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Similar movies loading state remains the same
+        if (this.loadingState.similar && this.similarMoviesContainer) {
+            this.similarMoviesContainer.innerHTML = `
+                <div class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Watch button loader
+        const watchButton = document.getElementById('watch-button');
+        if (this.loadingState.watchState && watchButton) {
+            setTimeout(() => {
+                watchButton.disabled = true;
+                watchButton.innerHTML = `
+                    <span class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </span>
+                    Loading...
+                `;
+            }, 300); // 300ms delay
+        }
+    }
+
+    hideLoadingState() {
+        this.loadingState.details = false;
+        this.loadingState.similar = false;
+        this.loadingState.watchState = false;
+    }
+
+    async checkWatchStatus() {
+        try {
+            const history = await apiService.getWatchHistory();
+            this.hasWatched = history.some(movie => movie.tmdb_id === parseInt(this.movieId));
+            this.updateWatchButton();
+        } catch (error) {
+            console.error('Error checking watch status:', error);
+        }
+    }
+
+    updateWatchButton() {
+        const watchButton = document.getElementById('watch-button');
+        if (watchButton) {
+            if (this.hasWatched) {
+                watchButton.classList.remove('btn-outline-light');
+                watchButton.classList.add('btn-secondary');
+                watchButton.innerHTML = '<i class="fas fa-check"></i> Marked as Watched';
+                watchButton.disabled = true;
+            } else {
+                watchButton.classList.remove('btn-secondary');
+                watchButton.classList.add('btn-outline-light');
+                watchButton.innerHTML = '<i class="fas fa-plus"></i> Mark as Watched';
+                watchButton.disabled = false;
+            }
+        }
+    }
+
     async loadMovieDetails() {
         try {
-            this.showLoading();
-            
             const movie = await apiService.getMovieDetails(this.movieId);
-            this.movie = movie;
             
-            this.renderMovieDetails(movie);
+            // Only render if we don't already have content
+            if (!this.movieDetailsContainer.querySelector('.movie-content')) {
+                this.renderMovieDetails(movie);
+            }
             
+            return movie;
         } catch (error) {
             console.error('Error loading movie details:', error);
             this.showError('Failed to load movie details. Please try again later.');
-        } finally {
-            this.hideLoading();
         }
-        
-        // Load similar movies separately
-        await this.loadSimilarMovies();
     }
 
-    async loadSimilarMovies() {
+    async loadSimilarMovies(page = 1) {
         try {
             if (!this.similarMoviesContainer) return;
             
-            const response = await apiService.getSimilarMovies(this.movieId);
+            // Show loading state
+            this.similarMoviesContainer.innerHTML = `
+                <div class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+            
+            const response = await apiService.getSimilarMovies(this.movieId, page);
+            
+            // Handle authentication error
+            if (response.error === 'Authentication required') {
+                this.similarMoviesContainer.innerHTML = `
+                    <div class="container">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-lock me-2"></i>
+                            Please log in to view similar movies.
+                        </div>
+                    </div>
+                `;
+                return;
+            }
             
             // Handle empty results
-            if (!response || !response.length) {
+            if (!response?.movies?.length) {
                 this.similarMoviesContainer.innerHTML = `
                     <div class="container">
                         <div class="alert alert-info">
@@ -72,6 +192,7 @@ class MoviePage {
                 return;
             }
             
+            // Render movies with pagination
             this.renderSimilarMovies(response);
             
         } catch (error) {
@@ -88,67 +209,103 @@ class MoviePage {
     }
 
     renderMovieDetails(movie) {
+        if (!this.movieDetailsContainer) {
+            console.error('Cannot render movie details: Container not found');
+            return;
+        }
+
         const posterUrl = apiService.getImageUrl(movie.poster_path);
         
         this.movieDetailsContainer.innerHTML = `
-            <div class="container py-5">
-                <div class="row">
-                    <div class="col-md-4">
-                        <img src="${posterUrl}" 
-                             class="img-fluid rounded movie-poster-detail" 
-                             alt="${movie.title}"
-                             onerror="this.onerror=null; this.src='../assets/images/placeholder.jpg';">
-                        ${this.isAuthenticated ? `
-                            <button class="btn btn-outline-light w-100 mt-3 watch-btn" 
-                                    data-movie-id="${movie.id}">
-                                <i class="fas fa-check"></i> Mark as Watched
-                            </button>
-                        ` : ''}
-                    </div>
-                    <div class="col-md-8">
-                        <h2>${movie.title}</h2>
-                        <p class="text-muted">
-                            ${movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'} | 
-                            ${movie.runtime ? `${movie.runtime} min` : 'N/A'} |
-                            ${movie.vote_average ? `${movie.vote_average.toFixed(1)}/10` : 'N/A'}
-                        </p>
-                        <p>${movie.overview || 'No overview available.'}</p>
-                        <div class="genres mb-3">
-                            ${movie.genres?.map(genre => 
-                                `<span class="badge bg-primary me-2">${genre.name}</span>`
-                            ).join('') || ''}
+            <div class="movie-content">
+                <div class="container py-5">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <img src="${posterUrl}" 
+                                 class="img-fluid rounded movie-poster-detail" 
+                                 alt="${movie.title}"
+                                 onerror="this.onerror=null; this.src='../assets/images/placeholder.jpg';">
+                            ${this.isAuthenticated ? `
+                                <button id="watch-button" class="btn ${this.hasWatched ? 'btn-secondary' : 'btn-outline-light'} w-100 mt-3" 
+                                        data-movie-id="${movie.id}">
+                                    <i class="fas ${this.hasWatched ? 'fa-check' : 'fa-plus'}"></i> 
+                                    ${this.hasWatched ? 'Marked as Watched' : 'Mark as Watched'}
+                                </button>
+                            ` : ''}
+                        </div>
+                        <div class="col-md-8">
+                            <h2>${movie.title}</h2>
+                            <p class="text-muted">
+                                ${movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'} | 
+                                ${movie.runtime ? `${movie.runtime} min` : 'N/A'} |
+                                ${movie.vote_average ? `${movie.vote_average.toFixed(1)}/10` : 'N/A'}
+                            </p>
+                            <p>${movie.overview || 'No overview available.'}</p>
+                            <div class="genres mb-3">
+                                ${movie.genres?.map(genre => 
+                                    `<span class="badge bg-primary me-2">${genre.name}</span>`
+                                ).join('') || ''}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         `;
 
-        // Add watch button handler
+        // Add watch button handler after rendering
         if (this.isAuthenticated) {
-            const watchButton = this.movieDetailsContainer.querySelector('.watch-btn');
-            watchButton.addEventListener('click', async (e) => {
-                e.preventDefault();
-                try {
-                    await apiService.addToWatchHistory(movie.id);
-                    watchButton.disabled = true;
-                    watchButton.innerHTML = '<i class="fas fa-check"></i> Watched';
-                    this.showToast('Added to watch history!', 'success');
-                } catch (error) {
-                    this.showToast('Error adding to watch history', 'danger');
-                }
-            });
+            const watchButton = document.getElementById('watch-button');
+            if (watchButton) {
+                watchButton.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (this.hasWatched) return;
+                    
+                    try {
+                        watchButton.disabled = true;
+                        watchButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding...';
+                        
+                        await apiService.addToWatchHistory(movie.id);
+                        this.hasWatched = true;
+                        this.updateWatchButton();
+                        this.showToast('Added to watch history!', 'success');
+                    } catch (error) {
+                        console.error('Error adding to watch history:', error);
+                        this.showToast('Failed to update watch history', 'danger');
+                        watchButton.disabled = false;
+                    }
+                });
+            }
         }
     }
 
-    renderSimilarMovies(movies) {
-        if (!this.similarMoviesContainer || !movies?.length) return;
-
+    renderSimilarMovies(response) {
+        if (!this.similarMoviesContainer || !response?.movies?.length) {
+            this.similarMoviesContainer.innerHTML = `
+                <div class="container">
+                    <div class="alert alert-info">
+                        No similar movies found.
+                    </div>
+                </div>
+            `;
+            return;
+        }
+    
+        const { movies, current_page, total_pages } = response;
+    
+        // Scroll to container top if changing pages
+        if (current_page > 1) {
+            this.similarMoviesContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+    
         this.similarMoviesContainer.innerHTML = `
             <div class="container">
                 <h3 class="mb-4">Similar Movies You Might Like</h3>
                 <div class="row g-4">
                     ${movies.map(movie => {
                         const releaseDate = movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A';
+                        const isWatched = movie.is_watched;
                         return `
                             <div class="col-md-3 col-sm-6">
                                 <div class="card h-100 movie-card">
@@ -169,9 +326,12 @@ class MoviePage {
                                             <a href="movie.html?id=${movie.tmdb_id || movie.id}" 
                                                class="btn btn-primary">View Details</a>
                                             ${this.isAuthenticated ? `
-                                                <button class="btn btn-outline-light watch-btn" 
-                                                        data-movie-id="${movie.id}">
-                                                    <i class="fas fa-check"></i> Mark as Watched
+                                                <button type="button" 
+                                                        class="btn ${isWatched ? 'btn-secondary' : 'btn-outline-light'} watch-btn" 
+                                                        data-movie-id="${movie.id}"
+                                                        ${isWatched ? 'disabled' : ''}>
+                                                    <i class="fas ${isWatched ? 'fa-check' : 'fa-plus'}"></i> 
+                                                    ${isWatched ? 'Watched' : 'Mark as Watched'}
                                                 </button>
                                             ` : ''}
                                         </div>
@@ -181,22 +341,49 @@ class MoviePage {
                         `;
                     }).join('')}
                 </div>
+                ${total_pages > 1 ? this.renderPagination(current_page, total_pages, 'similar-movies-pagination') : ''}
             </div>
         `;
-
-        // Add watch button handlers after rendering
+    
+        // Add pagination handlers
+        if (total_pages > 1) {
+            const paginationContainer = this.similarMoviesContainer.querySelector('.pagination');
+            if (paginationContainer) {
+                this.setupPaginationHandlers(paginationContainer, (newPage) => {
+                    this.loadSimilarMovies(newPage);
+                });
+            }
+        }
+    
+        // Add watch button handlers
         if (this.isAuthenticated) {
             this.similarMoviesContainer.querySelectorAll('.watch-btn').forEach(button => {
+                if (button.disabled) return; // Skip already watched movies
+                
                 button.addEventListener('click', async (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    
                     const movieId = button.dataset.movieId;
+                    if (button.disabled) return;
+                    
                     try {
-                        await apiService.addToWatchHistory(movieId);
-                        this.showToast('Added to watch history!', 'success');
                         button.disabled = true;
+                        button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding...';
+                        
+                        await apiService.addToWatchHistory(movieId);
+                        
+                        button.classList.remove('btn-outline-light');
+                        button.classList.add('btn-secondary');
                         button.innerHTML = '<i class="fas fa-check"></i> Watched';
+                        
+                        this.showToast('Added to watch history!', 'success');
                     } catch (error) {
+                        console.error('Error adding to watch history:', error);
+                        button.disabled = false;
+                        button.classList.remove('btn-secondary');
+                        button.classList.add('btn-outline-light');
+                        button.innerHTML = '<i class="fas fa-plus"></i> Mark as Watched';
                         this.showToast('Error adding to watch history', 'danger');
                     }
                 });
@@ -204,60 +391,52 @@ class MoviePage {
         }
     }
 
+    setupPaginationHandlers(container, callback) {
+        container.querySelectorAll('.pagination .page-link').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const page = parseInt(button.dataset.page);
+                if (!isNaN(page)) {
+                    // Show loading state
+                    this.showLoadingState();
+                    await callback(page);
+                }
+            });
+        });
+    }
+
     createMovieCard(movie) {
-        const movieEl = document.createElement('div');
-        movieEl.className = 'col-md-3 col-sm-6';
-
-        // Format release date
         const releaseDate = movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A';
-
-        movieEl.innerHTML = `
-            <div class="card h-100 movie-card">
-                <img src="${apiService.getImageUrl(movie.poster_path)}" 
-                     class="card-img-top" 
-                     alt="${movie.title}"
-                     onerror="this.onerror=null; this.src='../assets/images/placeholder.jpg';">
-                <div class="card-body">
-                    <h5 class="card-title text-truncate" title="${movie.title}">${movie.title}</h5>
-                    <p class="card-text">
-                        <small class="text-muted">${releaseDate}</small>
-                        <span class="float-end">
-                            <i class="fas fa-star text-warning"></i> 
-                            ${movie.vote_average?.toFixed(1) || 'N/A'}
-                        </span>
-                    </p>
-                    <div class="d-grid gap-2">
-                        <a href="movie.html?id=${movie.tmdb_id || movie.id}" 
-                           class="btn btn-primary">View Details</a>
-                        ${this.isAuthenticated ? `
-                            <button class="btn btn-outline-light watch-btn" 
-                                    data-movie-id="${movie.id}">
-                                <i class="fas fa-check"></i> Mark as Watched
-                            </button>
-                        ` : ''}
+        return `
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 movie-card">
+                    <img src="${apiService.getImageUrl(movie.poster_path)}" 
+                         class="card-img-top" 
+                         alt="${movie.title}"
+                         onerror="this.onerror=null; this.src='../assets/images/placeholder.jpg';">
+                    <div class="card-body">
+                        <h5 class="card-title text-truncate" title="${movie.title}">${movie.title}</h5>
+                        <p class="card-text">
+                            <small class="text-muted">${releaseDate}</small>
+                            <span class="float-end">
+                                <i class="fas fa-star text-warning"></i> 
+                                ${movie.vote_average?.toFixed(1) || 'N/A'}
+                            </span>
+                        </p>
+                        <div class="d-grid gap-2">
+                            <a href="movie.html?id=${movie.tmdb_id || movie.id}" 
+                               class="btn btn-primary">View Details</a>
+                            ${this.isAuthenticated ? `
+                                <button class="btn btn-outline-light watch-btn" 
+                                        data-movie-id="${movie.id}">
+                                    <i class="fas fa-check"></i> Mark as Watched
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
                 </div>
             </div>
         `;
-
-        // Add watch button handler if authenticated
-        if (this.isAuthenticated) {
-            const watchButton = movieEl.querySelector('.watch-btn');
-            watchButton.addEventListener('click', async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                try {
-                    await apiService.addToWatchHistory(movie.id);
-                    this.showToast('Added to watch history!', 'success');
-                    watchButton.disabled = true;
-                    watchButton.innerHTML = '<i class="fas fa-check"></i> Watched';
-                } catch (error) {
-                    this.showToast('Error adding to watch history', 'danger');
-                }
-            });
-        }
-
-        return movieEl;
     }
 
     showError(message) {
@@ -381,6 +560,72 @@ class MoviePage {
             }
         });
     }
+
+    renderPagination(currentPage, totalPages, containerId) {
+        if (totalPages <= 1) return '';
+        
+        return `
+            <nav aria-label="Movie navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item ${currentPage <= 1 ? 'disabled' : ''}">
+                        <button class="page-link" data-page="${currentPage - 1}" ${currentPage <= 1 ? 'disabled' : ''}>
+                            Previous
+                        </button>
+                    </li>
+                    ${this.generatePageNumbers(currentPage, totalPages)}
+                    <li class="page-item ${currentPage >= totalPages ? 'disabled' : ''}">
+                        <button class="page-link" data-page="${currentPage + 1}" ${currentPage >= totalPages ? 'disabled' : ''}>
+                            Next
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        `;
+    }
+
+    generatePageNumbers(currentPage, totalPages) {
+        let pages = [];
+        const maxVisiblePages = 5;
+        
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+        
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+        
+        if (startPage > 1) {
+            pages.push(`
+                <li class="page-item">
+                    <button class="page-link" data-page="1">1</button>
+                </li>
+            `);
+            if (startPage > 2) {
+                pages.push('<li class="page-item disabled"><span class="page-link">...</span></li>');
+            }
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(`
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <button class="page-link" data-page="${i}">${i}</button>
+                </li>
+            `);
+        }
+        
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                pages.push('<li class="page-item disabled"><span class="page-link">...</span></li>');
+            }
+            pages.push(`
+                <li class="page-item">
+                    <button class="page-link" data-page="${totalPages}">${totalPages}</button>
+                </li>
+            `);
+        }
+        
+        return pages.join('');
+    }
 }
 
 // Initialize page
@@ -388,3 +633,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const moviePage = new MoviePage();
     moviePage.initializeEventListeners();
 });
+
+function toggleSidebar() {
+    const sidebar = document.getElementById("mySidebar");
+    const mainContent = document.getElementById("main-content");
+    const overlay = document.querySelector(".sidebar-overlay");
+    
+    if (sidebar.classList.contains("active")) {
+        sidebar.classList.remove("active");
+        mainContent.classList.remove("shifted");
+        overlay.style.display = "none";
+    } else {
+        sidebar.classList.add("active");
+        mainContent.classList.add("shifted");
+        overlay.style.display = "block";
+    }
+}

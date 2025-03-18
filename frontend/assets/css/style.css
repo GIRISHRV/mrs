@@ -1,5 +1,32 @@
 /* Custom styles for the movie recommendation system */
+.pagination {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
 
+.pagination .page-link {
+    color: var(--bs-primary);
+    background-color: var(--netflix-dark);
+    border-color: var(--netflix-darker);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
+
+.pagination .page-item.disabled .page-link {
+    background-color: var(--netflix-darker);
+    border-color: var(--netflix-darker);
+    color: #6c757d;
+}
+
+.pagination .page-link:hover:not(.disabled) {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
 /* Global Styles */
 body {
     background-color: var(--netflix-black);
@@ -48,41 +75,48 @@ html {
 
 /* Movie card styling */
 .movie-card {
-    height: 100%;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    transition: transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow var(--transition-speed) ease,
-                opacity var(--transition-speed) ease;
-    will-change: transform;
-    opacity: 0.9;
-    background-color: var(--netflix-dark);
-    border: none;
-    position: relative;
-    transform-origin: center;
-}
-
-.movie-card:hover {
-    transform: scale(var(--card-hover-scale));
-    opacity: 1;
-    z-index: 2;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
-}
-
-.movie-card {
     background-color: var(--netflix-dark);
     border: none;
     transition: transform 0.3s ease;
+    height: 100%;
 }
 
 .movie-card:hover {
-    transform: scale(1.05);
+    transform: translateY(-5px);
+}
+
+.movie-card .card-img-wrapper {
+    position: relative;
+    padding-top: 150%; /* 2:3 aspect ratio */
+    overflow: hidden;
 }
 
 .movie-card .card-img-top {
-    height: 300px;
+    height: 400px;
     object-fit: cover;
+}
+
+.movie-card .card-body {
+    padding: 1.25rem;
+    background-color: #1a1a1a;
+}
+
+.movie-card .card-title {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    color: #fff;
+}
+
+.movie-card .card-text {
+    margin-bottom: 1rem;
+}
+
+.movie-card .text-muted {
+    color: #808080 !important;
+}
+
+.movie-card .btn {
+    font-size: 0.8rem;
 }
 
 .movie-card .card-body {
@@ -444,7 +478,7 @@ html {
 /* Dark Theme Colors */
 :root {
     --netflix-black: #141414;
-    --netflix-dark: #181818;
+    --netflix-dark: #212529;
     --netflix-red: #E50914;
     --netflix-text: #e5e5e5;
     --card-hover-scale: 1.05;
@@ -549,14 +583,16 @@ html {
     background-color: var(--netflix-dark);
     border: none;
     transition: transform 0.3s ease;
+    height: 100%;
 }
 
 .movie-card:hover {
-    transform: scale(1.05);
+    transform: translateY(-5px);
 }
 
 .movie-card .card-body {
-    padding: 1rem;
+    padding: 1.25rem;
+    background-color: #1a1a1a;
 }
 
 .movie-title {
@@ -745,3 +781,296 @@ img.loaded {
 .hero-image.loading {
     opacity: 0;
 }
+
+/* Loading animation */
+.loading-fade {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.row.g-4 {
+    --bs-gutter-x: 1.5rem;
+    --bs-gutter-y: 1.5rem;
+}
+
+/* Sidebar styles */
+.sidebar {
+    height: 100%;
+    width: 0;
+    position: fixed;
+    z-index: 1001;
+    top: 0;
+    left: 0;
+    background-color: #212529;
+    overflow-x: hidden;
+    transition: 0.3s;
+    padding-top: 60px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+}
+
+.sidebar.active {
+    width: 250px;
+}
+
+.sidebar a {
+    padding: 8px 8px 8px 32px;
+    text-decoration: none;
+    font-size: 18px;
+    color: #818181;
+    display: block;
+    transition: 0.3s;
+    white-space: nowrap;
+}
+
+.sidebar a:hover {
+    color: #f1f1f1;
+}
+
+.sidebar .close-btn {
+    position: absolute;
+    top: 0;
+    right: 25px;
+    font-size: 36px;
+    margin-left: 50px;
+    color: #818181;
+    cursor: pointer;
+}
+
+.sidebar-toggle {
+    font-size: 20px;
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    color: white;
+}
+
+/* Top navbar styles */
+.top-navbar {
+    background-color: var(--netflix-dark);
+    padding: 15px 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 999;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+}
+
+/* Main content padding to prevent navbar overlap */
+#main-content {
+    padding-top: 60px;  /* Match navbar height */
+    min-height: calc(100vh - 60px);
+    transition: margin-left .3s;
+}
+
+#main-content.shifted {
+    margin-left: 250px;
+}
+
+/* Sidebar toggle button */
+.sidebar-toggle {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 24px;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 10px;
+    z-index: 1000;
+}
+
+/* Search container - only for index.html */
+.search-container {
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* Media queries */
+@media (max-width: 768px) {
+    .search-container {
+        max-width: calc(100% - 80px);
+        margin-left: 60px;
+    }
+    
+    #main-content.shifted {
+        margin-left: 0;
+    }
+}
+
+/* Media queries */
+@media (max-width: 768px) {
+    .search-container {
+        max-width: calc(100% - 80px);
+        margin-left: 60px;
+    }
+}
+
+/* Top navbar styles for pages without search */
+.top-navbar {
+    padding: 15px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    background-color: #212529;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+}
+
+/* Sidebar toggle button styles */
+.sidebar-toggle {
+    font-size: 24px;
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    color: #fff;
+    padding: 10px 15px;
+    transition: color 0.3s ease;
+}
+
+.sidebar-toggle:hover {
+    color: #007bff;
+}
+
+/* Only show search container in index.html */
+.top-navbar .container-fluid {
+    display: none;
+}
+
+/* Exception for index.html */
+body.home .top-navbar .container-fluid {
+    display: block;
+}
+
+/* Update search button styles */
+.search-container .btn-outline-light {
+    height: 45px;
+    width: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-container .btn-outline-light i {
+    font-size: 1.2rem;
+}
+
+/* Main content push */
+#main-content {
+    transition: margin-left .3s;
+    margin-left: 0;
+    padding-top: 20px;
+}
+
+#main-content.shifted {
+    margin-left: 250px;
+}
+
+/* Overlay */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 999;
+    cursor: pointer;
+}
+
+/* Add media query for responsive design */
+@media (max-width: 768px) {
+    .search-container {
+        max-width: calc(100% - 100px);
+        margin-left: auto;
+    }
+    
+    .sidebar-toggle {
+        position: absolute;
+    }
+}
+
+/* Footer Styles */
+.footer {
+    background-color: #212529 !important;
+    color: #fff;
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+    margin-top: 4rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.footer h5 {
+    color: #fff;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+}
+
+.footer a {
+    color: #6c757d;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.footer a:hover {
+    color: #fff;
+    text-decoration: none;
+}
+
+.footer hr {
+    border-color: rgba(255,255,255,0.1);
+}
+
+/* Active sidebar link */
+.sidebar a.active {
+    color: #fff;
+    background-color: rgba(255,255,255,0.1);
+}
+
+/* Main content padding for footer */
+#main-content {
+    min-height: calc(100vh - 60px);
+    display: flex;
+    flex-direction: column;
+}
+
+#main-content > .container {
+    flex: 1;
+}
+
+/* Top navbar styles for pages without search */
+.top-navbar:not(:has(.search-container)) {
+    padding: 15px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+}
+
+.top-navbar:not(:has(.search-container)) .sidebar-toggle {
+    position: relative;
+    left: 0;
+    top: 0;
+}
+
+/* Keep existing styles for index.html search bar */
+.top-navbar .search-container {
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+

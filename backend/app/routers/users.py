@@ -135,40 +135,86 @@ async def add_to_watch_history(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    movie_id = movie_data.get("movie_id")
-    if not movie_id:
-        raise HTTPException(
-            status_code=422, 
-            detail="movie_id is required"
-        )
-    
-    movie = db.query(Movie).filter(Movie.tmdb_id == movie_id).first()
-    if not movie:
-        # If movie doesn't exist in our DB, fetch it from TMDB and save
-        movie_details = await tmdb_service.get_movie(movie_id)
-        if not movie_details:
-            raise HTTPException(status_code=404, detail="Movie not found")
+    try:
+        movie_id = movie_data.get("movie_id")
+        if not movie_id:
+            raise HTTPException(
+                status_code=422, 
+                detail="movie_id is required"
+            )
+        
+        # Check if movie exists in database
+        movie = db.query(Movie).filter(Movie.tmdb_id == movie_id).first()
+        
+        if not movie:
+            # Fetch movie details from TMDB
+            logger.info(f"Fetching movie {movie_id} from TMDB")
+            movie_details = await tmdb_service.get_movie(movie_id)
             
-        movie = Movie(
-            tmdb_id=movie_id,
-            title=movie_details["title"],
-            overview=movie_details.get("overview"),
-            poster_path=movie_details.get("poster_path"),
-            release_date=movie_details.get("release_date"),
-            vote_average=movie_details.get("vote_average"),
-            vote_count=movie_details.get("vote_count"),
-            popularity=movie_details.get("popularity")
+            if not movie_details:
+                logger.error(f"Movie {movie_id} not found on TMDB")
+                raise HTTPException(
+                    status_code=404,
+                    detail="Movie not found on TMDB"
+                )
+            
+            logger.info(f"Creating new movie record for {movie_details['title']}")
+            # Create new movie record
+            movie = Movie(
+                tmdb_id=movie_details["tmdb_id"],
+                title=movie_details["title"],
+                overview=movie_details["overview"],
+                poster_path=movie_details["poster_path"],
+                release_date=datetime.strptime(movie_details["release_date"], "%Y-%m-%d") if movie_details["release_date"] else None,
+                vote_average=movie_details["vote_average"],
+                vote_count=movie_details["vote_count"],
+                popularity=movie_details["popularity"]
+            )
+            
+            try:
+                db.add(movie)
+                db.commit()
+                db.refresh(movie)
+            except Exception as e:
+                logger.error(f"Error saving movie to database: {str(e)}")
+                db.rollback()
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Error saving movie to database: {str(e)}"
+                )
+        
+        # Add to watch history if not already watched
+        if movie not in current_user.watch_history:
+            current_user.watch_history.append(movie)
+            try:
+                db.commit()
+            except Exception as e:
+                logger.error(f"Error adding to watch history: {str(e)}")
+                db.rollback()
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Error adding to watch history: {str(e)}"
+                )
+        
+        return {
+            "status": "success",
+            "message": "Added to watch history",
+            "movie": {
+                "id": movie.id,
+                "tmdb_id": movie.tmdb_id,
+                "title": movie.title,
+                "poster_path": movie.poster_path
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An unexpected error occurred: {str(e)}"
         )
-        db.add(movie)
-        db.commit()
-        db.refresh(movie)
-    
-    # Add to watch history if not already watched
-    if movie not in current_user.watch_history:
-        current_user.watch_history.append(movie)
-        db.commit()
-    
-    return {"status": "success", "message": "Added to watch history"}
 
 @router.get("/watch-history")
 async def get_watch_history(
@@ -186,6 +232,37 @@ async def get_watch_history(
         .all()
     )
     return {"history": history}
+
+@router.delete("/watch-history/{movie_id}")
+async def remove_from_watch_history(
+    movie_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        # Remove the association from watch_history table
+        result = db.execute(
+            watch_history.delete().where(
+                (watch_history.c.user_id == current_user.id) &
+                (watch_history.c.movie_id == movie_id)
+            )
+        )
+        db.commit()
+        
+        if result.rowcount == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="Movie not found in watch history"
+            )
+            
+        return {"status": "success", "message": "Removed from watch history"}
+        
+    except Exception as e:
+        logger.error(f"Error removing from watch history: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
 # Watchlist endpoints
 @router.post("/watch-list/toggle")

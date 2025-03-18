@@ -32,16 +32,15 @@ class User(Base):
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
     avatar_url = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.now)
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     preferences = relationship("Genre", secondary="user_genre", back_populates="users")
     watch_history = relationship(
         "Movie",
-        secondary="watch_history",
-        back_populates="watched_by",
-        lazy="dynamic"
+        secondary=watch_history,
+        back_populates="watchers"
     )
     watchlist_entries = relationship("Watchlist", back_populates="user")
     ratings_entries = relationship("Rating", back_populates="user", cascade="all, delete-orphan")

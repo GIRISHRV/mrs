@@ -47,33 +47,46 @@ class MovieApp {
         });
     }
 
-    async loadPopularMovies() {
+    async loadPopularMovies(page = 1) {
         if (!this.popularMoviesContainer) return;
         
         try {
-            const response = await apiService.getPopularMovies();
-            
-            // Clear loading spinner
-            this.popularMoviesContainer.innerHTML = '';
-            
-            // Extract movies array from response
-            const movies = response.movies || [];
-            console.log('Movies array:', movies);
-            
-            // Create movie grid
-            const movieGrid = document.createElement('div');
-            movieGrid.className = 'row g-4';
-            
-            // Add movies to grid
-            movies.forEach(movie => {
-                movieGrid.innerHTML += this.createMovieCard(movie);
-            });
+            // Show loading state
+            this.popularMoviesContainer.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
 
-            // Add grid to container
-            this.popularMoviesContainer.appendChild(movieGrid);
+            const response = await apiService.getPopularMovies(page);
+            
+            // Extract movies array and pagination data
+            const { movies, current_page, total_pages } = response;
+            
+            if (!movies.length) {
+                this.popularMoviesContainer.innerHTML = `
+                    <div class="col-12 text-center">
+                        <div class="alert alert-info">No movies found.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Create container with pagination
+            this.popularMoviesContainer.innerHTML = `
+                <div class="row g-4">
+                    ${movies.map(movie => this.createMovieCard(movie)).join('')}
+                </div>
+                ${this.renderPagination(current_page, total_pages)}
+            `;
 
             // Add watch button handlers after rendering
             this.attachWatchButtonHandlers();
+            
+            // Setup pagination handlers
+            this.setupPaginationHandlers();
 
         } catch (error) {
             console.error('Error loading popular movies:', error);
@@ -85,6 +98,86 @@ class MovieApp {
                 </div>
             `;
         }
+    }
+
+    renderPagination(currentPage, totalPages) {
+        if (totalPages <= 1) return '';
+        
+        return `
+            <nav aria-label="Popular movies navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item ${currentPage <= 1 ? 'disabled' : ''}">
+                        <button class="page-link" data-page="${currentPage - 1}" ${currentPage <= 1 ? 'disabled' : ''}>
+                            Previous
+                        </button>
+                    </li>
+                    ${this.generatePageNumbers(currentPage, totalPages)}
+                    <li class="page-item ${currentPage >= totalPages ? 'disabled' : ''}">
+                        <button class="page-link" data-page="${currentPage + 1}" ${currentPage >= totalPages ? 'disabled' : ''}>
+                            Next
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        `;
+    }
+
+    generatePageNumbers(currentPage, totalPages) {
+        let pages = [];
+        const maxVisiblePages = 5;
+        
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+        
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+        
+        if (startPage > 1) {
+            pages.push(`
+                <li class="page-item">
+                    <button class="page-link" data-page="1">1</button>
+                </li>
+            `);
+            if (startPage > 2) {
+                pages.push('<li class="page-item disabled"><span class="page-link">...</span></li>');
+            }
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(`
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <button class="page-link" data-page="${i}">${i}</button>
+                </li>
+            `);
+        }
+        
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                pages.push('<li class="page-item disabled"><span class="page-link">...</span></li>');
+            }
+            pages.push(`
+                <li class="page-item">
+                    <button class="page-link" data-page="${totalPages}">${totalPages}</button>
+                </li>
+            `);
+        }
+        
+        return pages.join('');
+    }
+
+    setupPaginationHandlers() {
+        this.popularMoviesContainer.querySelectorAll('.pagination .page-link').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const page = parseInt(button.dataset.page);
+                if (!isNaN(page)) {
+                    await this.loadPopularMovies(page);
+                    // Scroll to top of container smoothly
+                    this.popularMoviesContainer.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
     }
     
     async loadGenres() {
@@ -247,5 +340,58 @@ document.addEventListener('DOMContentLoaded', () => {
             heroImage.classList.remove('loading');
             heroImage.classList.add('loaded');
         }
+    }
+});
+
+function toggleSidebar() {
+    const sidebar = document.getElementById("mySidebar");
+    const mainContent = document.getElementById("main-content");
+    const overlay = document.querySelector(".sidebar-overlay");
+    
+    if (sidebar.classList.contains("active")) {
+        sidebar.classList.remove("active");
+        mainContent.classList.remove("shifted");
+        overlay.style.display = "none";
+    } else {
+        sidebar.classList.add("active");
+        mainContent.classList.add("shifted");
+        overlay.style.display = "block";
+    }
+}
+
+// Close sidebar on window resize if it's open
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+        const sidebar = document.getElementById("mySidebar");
+        const mainContent = document.getElementById("main-content");
+        const overlay = document.querySelector(".sidebar-overlay");
+        
+        sidebar.classList.remove("active");
+        mainContent.classList.remove("shifted");
+        overlay.style.display = "none";
+    }
+});
+
+// Close sidebar when clicking outside
+document.addEventListener('click', (e) => {
+    const sidebar = document.getElementById("mySidebar");
+    const sidebarToggle = document.querySelector(".sidebar-toggle");
+    
+    if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target) && sidebar.classList.contains("active")) {
+        toggleSidebar();
+    }
+});
+
+// Add search form handler
+document.addEventListener('DOMContentLoaded', function() {
+    const searchForm = document.getElementById('search-form');
+    if (searchForm) {
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const query = document.getElementById('search-input').value.trim();
+            if (query) {
+                window.location.href = `pages/search-results.html?query=${encodeURIComponent(query)}`;
+            }
+        });
     }
 });

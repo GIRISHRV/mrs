@@ -69,7 +69,21 @@ class ApiService {
 
     // Core movie methods
     async getPopularMovies(page = 1) {
-        return this.apiCall(`/movies/popular?page=${page}`);
+        try {
+            const response = await this.apiCall(`/movies/popular?page=${page}`);
+            return {
+                movies: response.movies || [],
+                current_page: page,
+                total_pages: Math.ceil((response.total_results || 0) / 20) // Assuming 20 movies per page
+            };
+        } catch (error) {
+            console.error('Error fetching popular movies:', error);
+            return {
+                movies: [],
+                current_page: 1,
+                total_pages: 1
+            };
+        }
     }
 
     async getGenres() {
@@ -84,20 +98,36 @@ class ApiService {
         return this.apiCall(`/movies/${movieId}`);
     }
 
-    async getSimilarMovies(movieId, limit = 8) {
-        if (!movieId) {
-            console.error('Movie ID is required');
-            return { movies: [] };
-        }
-        
+    async getSimilarMovies(movieId, page = 1, limit = 8) {
         try {
-            console.log(`Getting similar movies for ID: ${movieId}, limit: ${limit}`);
-            const response = await this.apiCall(`/recommendations/similar/${movieId}?limit=${limit}`);
-            console.log('Similar movies response:', response);
-            return response;
+            const token = localStorage.getItem('token');
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            
+            const response = await this.apiCall(`/movies/${movieId}/similar?page=${page}&limit=${limit}`, {
+                headers: headers
+            });
+            
+            return {
+                movies: response.results || [],
+                current_page: page,
+                total_pages: Math.ceil((response.total_results || 0) / limit)
+            };
         } catch (error) {
             console.error('Error fetching similar movies:', error);
-            return { movies: [] };
+            if (error.status === 401) {
+                // Handle unauthorized error gracefully
+                return {
+                    movies: [],
+                    current_page: 1,
+                    total_pages: 1,
+                    error: 'Authentication required'
+                };
+            }
+            return {
+                movies: [],
+                current_page: 1,
+                total_pages: 1
+            };
         }
     }
 
@@ -341,6 +371,21 @@ class ApiService {
         } catch (error) {
             console.error('Error getting watch history:', error);
             return [];
+        }
+    }
+
+    async removeFromWatchHistory(movieId) {
+        try {
+            const response = await this.apiCall(`/users/watch-history/${movieId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            return response;
+        } catch (error) {
+            console.error('Error removing from watch history:', error);
+            throw error;
         }
     }
 }

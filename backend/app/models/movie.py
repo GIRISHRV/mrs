@@ -15,9 +15,9 @@ movie_genre = Table(
 watch_history = Table(
     'watch_history',
     Base.metadata,
-    Column('user_id', Integer, ForeignKey('users.id')),
-    Column('movie_id', Integer, ForeignKey('movies.id')),
-    Column('watched_at', DateTime, default=datetime.now)
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
+    Column('movie_id', Integer, ForeignKey('movies.id'), primary_key=True),
+    Column('watched_at', DateTime, default=datetime.utcnow)
 )
 
 class Movie(Base):
@@ -35,7 +35,7 @@ class Movie(Base):
     
     # Relationships
     genres = relationship("Genre", secondary="movie_genre", back_populates="movies")
-    watched_by = relationship(
+    watchers = relationship(
         "User",
         secondary=watch_history,
         back_populates="watch_history",

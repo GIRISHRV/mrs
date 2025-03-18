@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
-from app.models import database
+from app.models.database import create_tables
 from app.routers import auth, movies, recommendations, users
 from app.config import settings
 import logging
@@ -32,11 +32,10 @@ app.include_router(movies.router)
 app.include_router(recommendations.router)
 app.include_router(users.router)
 
-# Create database tables
+# Create database tables on startup
 @app.on_event("startup")
-async def startup():
-    # Create tables
-    database.Base.metadata.create_all(bind=database.engine)
+async def startup_event():
+    create_tables()
 
 # Root endpoint
 @app.get("/")

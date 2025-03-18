@@ -10,49 +10,85 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
-<body class="bg-dark text-white">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="../index.html">UFlix</a>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="../index.html">Home</a>
-                    </li>
-                    <li class="nav-item auth-required">
-                        <a class="nav-link" href="your-space.html">Your Space</a>
-                    </li>
-                    <li class="nav-item auth-required">
-                        <a class="nav-link" href="profile.html">Profile</a>
-                    </li>
-                </ul>
-            </div>
+<body class="text-white">
+    <!-- Sidebar -->
+    <div id="mySidebar" class="sidebar">
+        <a href="javascript:void(0)" class="close-btn" onclick="toggleSidebar()">&times;</a>
+        <a class="navbar-brand mb-4 ms-4" href="../index.html">UFlix</a>
+        <a href="../index.html"><i class="fas fa-home me-2"></i>Home</a>
+        <a href="your-space.html" class="auth-required active"><i class="fas fa-film me-2"></i>Your Space</a>
+        <a href="profile.html" class="auth-required"><i class="fas fa-user me-2"></i>Profile</a>
+    </div>
+
+    <!-- Overlay -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <nav class="top-navbar">
+        <button class="sidebar-toggle" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <div class="search-container">
+            
         </div>
     </nav>
 
-    <div class="container py-5">
-        <div class="row">
-            <!-- Watch History Section -->
-            <div class="col-12 mb-5">
-                <h2 class="mb-4">Recently Watched</h2>
-                <div class="row g-4" id="watch-history-container">
-                    <!-- Watch history items will be loaded here -->
+    <!-- Main Content -->
+    <div id="main-content">
+        <div class="container py-5">
+            <div class="row">
+                <!-- Watch History Section -->
+                <div class="col-12 mb-5">
+                    <h2 class="mb-4">Recently Watched</h2>
+                    <div class="row g-4" id="watch-history-container">
+                        <!-- Watch history items will be loaded here -->
+                    </div>
                 </div>
-            </div>
 
-            <!-- Recommendations Section -->
-            <div class="col-12">
-                <h2 class="mb-4">Recommended For You</h2>
-                <div class="row g-4" id="recommendations-container">
-                    <!-- Recommendations will be loaded here -->
+                <!-- Recommendations Section -->
+                <div class="col-12">
+                    <h2 class="mb-4">Recommended For You</h2>
+                    <div class="row g-4" id="recommendations-container">
+                        <!-- Recommendations will be loaded here -->
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Footer -->
+        <footer class="bg-dark text-white py-4 mt-5">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>UFlix</h5>
+                        <p>Your personalized movie recommendation platform.</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h5>Links</h5>
+                        <ul class="list-unstyled">
+                            <li><a href="#" class="text-white">Home</a></li>
+                            <li><a href="pages/profile.html" class="text-white">Profile</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-3">
+                        <h5>Powered By</h5>
+                        <p>TMDB API</p>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12 text-center">
+                        <p class="mb-0">© 2025 UFlix. All rights reserved.</p>
+                    </div>
+                </div>
+            </div>
+        </footer>
     </div>
 
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../assets/js/api.service.js"></script>
+    <script src="../assets/js/api.js"></script>
     <script src="../assets/js/auth.guard.js"></script>
+    <script src="../assets/js/auth.js"></script>
     <script src="../assets/js/your-space.js"></script>
 </body>
 </html>
