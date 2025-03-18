@@ -39,38 +39,18 @@ async def get_popular_movies(
     """Get popular movies from TMDB"""
     response = tmdb_service.get_popular_movies(page)
     
-    # Process and save movies to the database
-    movies = []
-    for movie_data in response.get("results", []):
-        # Check if movie exists in database
-        db_movie = db.query(Movie).filter(Movie.tmdb_id == movie_data["id"]).first()
-        
-        if not db_movie:
-            # Create new movie record
-            db_movie = Movie(
-                tmdb_id=movie_data["id"],
-                title=movie_data["title"],
-                overview=movie_data["overview"],
-                release_date=datetime.strptime(movie_data["release_date"], "%Y-%m-%d") if movie_data.get("release_date") else None,
-                poster_path=movie_data["poster_path"],
-                vote_average=movie_data["vote_average"],
-                vote_count=movie_data["vote_count"],
-                popularity=movie_data["popularity"],
-            )
-            
-            # Add genres
-            for genre_id in movie_data.get("genre_ids", []):
-                genre = db.query(Genre).filter(Genre.id == genre_id).first()
-                if genre:
-                    db_movie.genres.append(genre)
-                    
-            db.add(db_movie)
-            db.commit()
-            db.refresh(db_movie)
-        
-        movies.append(db_movie)
+    # Filter out adult content
+    movies = [
+        movie for movie in response.get("results", [])
+        if not movie.get("adult", False)
+    ]
     
-    return movies
+    return {
+        "movies": movies,
+        "current_page": response.get("page", 1),
+        "total_pages": response.get("total_pages", 1),
+        "total_results": len(movies)
+    }
 
 @router.get("/search")
 async def search_movies(
@@ -94,17 +74,17 @@ async def search_movies(
         response = tmdb_service.search_movies(query.strip(), page)
         logger.info(f"Search response received with {len(response.get('results', []))} results")
         
-        # Filter out movies without poster path
+        # Filter out adult content from results
         filtered_results = [
             movie for movie in response.get("results", [])
-            if movie.get("poster_path")
+            if not movie.get("adult", False) and movie.get("poster_path")
         ]
         
         return {
             "page": response.get("page", 1),
             "results": filtered_results,
             "total_pages": response.get("total_pages", 1),
-            "total_results": response.get("total_results", 0)
+            "total_results": len(filtered_results)
         }
         
     except Exception as e:
@@ -257,17 +237,17 @@ async def search_movies(
         response = tmdb_service.search_movies(query.strip(), page)
         logger.info(f"Search response received with {len(response.get('results', []))} results")
         
-        # Filter out movies without poster path
+        # Filter out adult content from results
         filtered_results = [
             movie for movie in response.get("results", [])
-            if movie.get("poster_path")
+            if not movie.get("adult", False) and movie.get("poster_path")
         ]
         
         return {
             "page": response.get("page", 1),
             "results": filtered_results,
             "total_pages": response.get("total_pages", 1),
-            "total_results": response.get("total_results", 0)
+            "total_results": len(filtered_results)
         }
         
     except Exception as e:

@@ -2,7 +2,21 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
-# Movie schemas
+# First define Genre schemas since MovieResponse depends on it
+class GenreBase(BaseModel):
+    name: str
+
+class GenreCreate(GenreBase):
+    id: int
+
+class GenreResponse(BaseModel):
+    id: int
+    name: str
+    
+    class Config:
+        from_attributes = True
+
+# Then define Movie schemas
 class MovieBase(BaseModel):
     title: str
     overview: Optional[str] = None
@@ -21,22 +35,24 @@ class MovieResponse(BaseModel):
     title: str
     overview: str
     poster_path: Optional[str] = None
+    backdrop_path: Optional[str] = None
     release_date: Optional[str] = None
     vote_average: Optional[float] = None
-    genre_ids: List[int] = []
-
-# Genre schemas (needed for UserResponse)
-class GenreBase(BaseModel):
-    name: str
-
-class GenreCreate(GenreBase):
-    id: int
-
-class GenreResponse(GenreBase):
-    id: int
+    genres: List[GenreResponse] = []
     
     class Config:
         from_attributes = True
+        
+    @classmethod
+    def from_orm(cls, movie):
+        # Handle None values for optional fields
+        if hasattr(movie, 'release_date') and isinstance(movie.release_date, datetime):
+            movie.release_date = movie.release_date.strftime('%Y-%m-%d')
+        if not hasattr(movie, 'backdrop_path'):
+            movie.backdrop_path = None
+        if not hasattr(movie, 'genres'):
+            movie.genres = []
+        return super().from_orm(movie)
 
 # Movie history schemas (needed for UserResponse)
 class MovieHistoryCreate(BaseModel):

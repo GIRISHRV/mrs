@@ -53,8 +53,11 @@ class YourSpace {
 
     async init() {
         try {
-            await this.loadWatchHistory();
-            await this.loadRecommendations();
+            // Remove model training and just load content
+            await Promise.all([
+                this.loadWatchHistory(),
+                this.loadRecommendations()
+            ]);
         } catch (error) {
             console.error('Error initializing Your Space:', error);
         }
@@ -104,11 +107,16 @@ class YourSpace {
             }
 
             this.recommendationsContainer.innerHTML = recommendations
-                .map(movie => this.createMovieCard(movie))
+                .map(movie => this.createRecommendationCard(movie))
                 .join('');
 
         } catch (error) {
             console.error('Error loading recommendations:', error);
+            this.recommendationsContainer.innerHTML = `
+                <div class="col-12 text-center">
+                    <p>Error loading recommendations. Please try again later.</p>
+                </div>
+            `;
         }
     }
 
@@ -192,12 +200,7 @@ class YourSpace {
                         <div class="d-grid gap-2">
                             <a href="movie.html?id=${movie.tmdb_id || movie.id}" 
                                class="btn btn-primary">View Details</a>
-                            ${this.isAuthenticated ? `
-                                <button class="btn btn-outline-light watch-btn" 
-                                        data-movie-id="${movie.id}">
-                                    <i class="fas fa-plus"></i> Mark as Watched
-                                </button>
-                            ` : ''}
+                            
                         </div>
                     </div>
                 </div>

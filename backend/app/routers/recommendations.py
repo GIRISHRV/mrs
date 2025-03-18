@@ -17,20 +17,21 @@ recommendation_service = RecommendationService()
 
 @router.get("/personalized", response_model=List[MovieResponse])
 async def get_personalized_recommendations(
-    limit: int = Query(10, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    limit: int = 12,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    """Get personalized movie recommendations based on user preferences and watch history"""
-    # If user has no watch history, return popular movies
-    if not current_user.watch_history:
-        response = tmdb_service.get_popular_movies()
-        return response.get("results", [])[:limit]
-    
-    # Get recommendations based on user's watch history and preferences
-    recommended_movies = recommendation_service.get_recommendations_for_user(current_user, limit, db)
-    
-    return recommended_movies
+    try:
+        recommendations = recommendation_service.get_recommendations_for_user(
+            user=current_user,
+            limit=limit,
+            db=db
+        )
+        
+        return [MovieResponse.from_orm(movie) for movie in recommendations]
+    except Exception as e:
+        logger.error(f"Error getting personalized recommendations: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/similar/{movie_id}", response_model=List[MovieResponse])
 async def get_similar_movies(
@@ -101,4 +102,25 @@ async def get_recommendations_by_genre(
     })
     
     return response.get("results", [])
+
+@router.post("/train")
+async def train_recommendation_model(
+    db: Session = Depends(get_db)
+):
+    """Train the recommendation model"""
+    try:
+        success = recommendation_service.train(db)
+        if success:
+            return {"message": "Successfully trained recommendation model"}
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to train recommendation model"
+            )
+    except Exception as e:
+        logger.error(f"Error training model: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error training model: {str(e)}"
+        )
 

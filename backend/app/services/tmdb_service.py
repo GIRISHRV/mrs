@@ -15,33 +15,32 @@ class TMDBService:
     BASE_URL = "https://api.themoviedb.org/3"
     
     def __init__(self):
-        self.api_key = settings.tmdb_api_key
-        self.access_token = settings.tmdb_access_token
-        self.base_url = settings.tmdb_base_url
+        self.api_key = "0bd68a06943ae5626db6781dba9948c5"
+        self.base_url = "https://api.themoviedb.org/3"
         self.session = None
     
-    def _make_request(self, endpoint: str, params: Dict[str, Any] = None) -> Dict:
-        """Make a request to the TMDB API"""
-        url = f"{self.base_url}{endpoint}"
-        headers = {
-            "Authorization": f"Bearer {self.access_token}",
-            "Content-Type": "application/json;charset=utf-8"
-        }
-        
-        # Add API key to params
-        params = params or {}
-        params["api_key"] = self.api_key
+    def _make_request(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict:
+        """Make a request to TMDB API with adult content filtered"""
+        if params is None:
+            params = {}
+            
+        # Always include these parameters to filter out adult content
+        params.update({
+            'api_key': self.api_key,
+            'include_adult': False,
+            'language': 'en-US'
+        })
         
         try:
-            response = requests.get(url, headers=headers, params=params)
+            response = requests.get(f"{self.base_url}{endpoint}", params=params)
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as e:
+        except Exception as e:
             logger.error(f"TMDB API error: {str(e)}")
-            raise
+            return {}
 
     def get_popular_movies(self, page: int = 1) -> Dict:
-        """Get popular movies"""
+        """Get popular movies from TMDB"""
         return self._make_request("/movie/popular", {"page": page})
     
     def get_movie_details(self, movie_id: int) -> Dict:
@@ -49,16 +48,14 @@ class TMDBService:
         return self._make_request(f"/movie/{movie_id}")
     
     def search_movies(self, query: str, page: int = 1) -> Dict:
-        """Search for movies by title"""
-        params = {
+        """Search for movies"""
+        return self._make_request("/search/movie", {
             "query": query,
-            "page": page,
-            "include_adult": False
-        }
-        return self._make_request("/search/movie", params)
+            "page": page
+        })
     
     def get_movie_recommendations(self, movie_id: int) -> Dict:
-        """Get recommendations for a movie"""
+        """Get movie recommendations from TMDB"""
         return self._make_request(f"/movie/{movie_id}/recommendations")
     
     def get_movie_genres(self) -> Dict:
@@ -67,25 +64,13 @@ class TMDBService:
     
     def discover_movies(self, params: Dict[str, Any]) -> Dict:
         """Discover movies with filters"""
+        # Ensure adult content is filtered even if params include it
+        params['include_adult'] = False
         return self._make_request("/discover/movie", params)
 
     def get_similar_movies(self, movie_id: int, page: int = 1) -> Dict:
         """Get similar movies from TMDB API"""
-        try:
-            url = f"{self.base_url}/movie/{movie_id}/similar"
-            params = {
-                "api_key": self.api_key,
-                "language": "en-US",
-                "page": page
-            }
-            
-            response = requests.get(url, params=params)
-            response.raise_for_status()
-            return response.json()
-            
-        except requests.RequestException as e:
-            logger.error(f"TMDB API error getting similar movies: {str(e)}")
-            return {"results": [], "page": 1, "total_pages": 1, "total_results": 0}
+        return self._make_request(f"/movie/{movie_id}/similar")
     
     async def get_movies_by_genre(self, genre_id: int, page: int = 1) -> dict:
         """Get movies by genre ID from TMDB"""

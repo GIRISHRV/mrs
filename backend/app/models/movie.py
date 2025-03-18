@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Table, DateTime
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Table, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from app.models.database import Base
 from datetime import datetime
@@ -29,10 +29,12 @@ class Movie(Base):
     overview = Column(String)
     release_date = Column(DateTime, nullable=True)
     poster_path = Column(String, nullable=True)
+    backdrop_path = Column(String, nullable=True)
     vote_average = Column(Float)
     vote_count = Column(Integer)
     popularity = Column(Float)
-    
+    adult = Column(Boolean, default=False, nullable=False)  # Add this line
+
     # Relationships
     genres = relationship("Genre", secondary="movie_genre", back_populates="movies")
     watchers = relationship(
