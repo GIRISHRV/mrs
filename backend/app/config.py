@@ -1,23 +1,27 @@
 from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+import os
 from typing import List
 import json
 from functools import lru_cache
 
+load_dotenv()
+
 class Settings(BaseSettings):
     # Database settings
-    database_url: str = "sqlite:///./app.db"
+    database_url: str = os.getenv("DATABASE_URL", "sqlite:///./app.db")
     postgres_user: str = "postgres"
     postgres_password: str = ""
 
     # JWT settings
-    secret_key: str
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60
+    secret_key: str = os.getenv("SECRET_KEY", "your-secret-key-here")
+    algorithm: str = os.getenv("ALGORITHM", "HS256")
+    access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
     # TMDB settings
-    tmdb_api_key: str
-    tmdb_access_token: str
-    tmdb_base_url: str = "https://api.themoviedb.org/3"
+    tmdb_api_key: str = os.getenv("TMDB_API_KEY")
+    tmdb_access_token: str = os.getenv("TMDB_ACCESS_TOKEN")
+    tmdb_base_url: str = os.getenv("TMDB_BASE_URL", "https://api.themoviedb.org/3")
 
     # CORS settings
     cors_origins: List[str] = []

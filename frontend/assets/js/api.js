@@ -91,11 +91,16 @@ class ApiService {
     }
 
     async getMovieDetails(movieId) {
-        if (!movieId) {
-            console.error('Movie ID is required');
-            throw new Error('Movie ID is required');
+        try {
+            // Use the common apiCall method instead of direct fetch
+            const response = await this.apiCall(`/movies/${movieId}`, {
+                headers: this.getAuthHeaders() // Use the correct method name
+            });
+            return response;
+        } catch (error) {
+            console.error('Error fetching movie details:', error);
+            throw error;
         }
-        return this.apiCall(`/movies/${movieId}`);
     }
 
     async getSimilarMovies(movieId, page = 1, limit = 8) {
@@ -159,31 +164,16 @@ class ApiService {
         }
     }
 
-    async register(username, email, password) {
+    async register(userData) {
         try {
-            console.log('Registration payload (about to send):', { 
-                username, 
-                email, 
-                password: password ? '***' : '<empty>' 
-            });
-            
-            const payload = JSON.stringify({
-                username,
-                email,
-                password
-            });
-            
-            console.log('Stringified payload:', payload);
-            
             const response = await this.apiCall('/auth/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: payload
+                body: JSON.stringify(userData)
             });
             
-            console.log('Registration response:', response);
             return response;
         } catch (error) {
             console.error('Registration error:', error);
@@ -232,14 +222,23 @@ class ApiService {
         }
     }
 
-    async getMoviesByGenre(genreId) {
+    async getMoviesByGenre(genreId, page = 1) {
         try {
-            const response = await this.apiCall(`/movies/genre/${genreId}`);
-            console.log('Genre movies response:', response);
-            return response;
+            const response = await this.apiCall(`/movies/genre/${genreId}?page=${page}`);
+            return {
+                results: response.results || [],
+                page: response.page || 1,
+                total_pages: response.total_pages || 1,
+                total_results: response.total_results || 0
+            };
         } catch (error) {
             console.error('Error fetching genre movies:', error);
-            throw error;
+            return {
+                results: [],
+                page: 1,
+                total_pages: 1,
+                total_results: 0
+            };
         }
     }
     

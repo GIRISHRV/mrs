@@ -6,6 +6,7 @@ from app.models.database import create_tables
 from app.routers import auth, movies, recommendations, users
 from app.config import settings
 import logging
+from pydantic import ValidationError
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -119,8 +119,38 @@ class UserBase(BaseModel):
     email: EmailStr = Field(..., description="User's email address")
     username: str = Field(..., min_length=3, max_length=50, description="Username")
 
-class UserCreate(UserBase):
-    password: str = Field(..., min_length=6, description="User's password")
+class UserCreate(BaseModel):
+    full_name: str
+    age: int
+    email: EmailStr
+    gender: str
+    password: str
+    location: str
+    marital_status: str
+    favorite_countries: str  # Comma-separated list of countries
+    username: str  # Keep username for system purposes
+
+    @validator('age')
+    def validate_age(cls, v):
+        if v < 13:
+            raise ValueError('Must be at least 13 years old')
+        if v > 120:
+            raise ValueError('Invalid age')
+        return v
+
+    @validator('gender')
+    def validate_gender(cls, v):
+        valid_genders = ['male', 'female', 'other', 'prefer not to say']
+        if v.lower() not in valid_genders:
+            raise ValueError('Invalid gender selection')
+        return v.lower()
+
+    @validator('marital_status')
+    def validate_marital_status(cls, v):
+        valid_statuses = ['single', 'married', 'divorced', 'widowed', 'prefer not to say']
+        if v.lower() not in valid_statuses:
+            raise ValueError('Invalid marital status')
+        return v.lower()
 
 class UserResponse(BaseModel):
     id: int

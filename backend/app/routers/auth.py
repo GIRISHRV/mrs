@@ -11,6 +11,7 @@ from app.utils.auth import create_access_token, get_current_user
 from app.schemas.schemas import UserCreate, UserResponse, Token
 from app.config import settings
 import logging
+from pydantic import ValidationError
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 logger = logging.getLogger(__name__)

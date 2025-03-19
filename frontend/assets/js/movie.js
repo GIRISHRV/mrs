@@ -139,16 +139,22 @@ class MoviePage {
     async loadMovieDetails() {
         try {
             const movie = await apiService.getMovieDetails(this.movieId);
+            this.renderMovieDetails(movie);
             
-            // Only render if we don't already have content
-            if (!this.movieDetailsContainer.querySelector('.movie-content')) {
-                this.renderMovieDetails(movie);
+            // Reset Disqus for new movie
+            if (window.DISQUS) {
+                window.DISQUS.reset({
+                    reload: true,
+                    config: function () {
+                        this.page.identifier = `movie_${this.movieId}`;
+                        this.page.url = window.location.href;
+                        this.page.title = movie.title;
+                    }
+                });
             }
-            
-            return movie;
         } catch (error) {
             console.error('Error loading movie details:', error);
-            this.showError('Failed to load movie details. Please try again later.');
+            this.showError('Failed to load movie details');
         }
     }
 
@@ -632,6 +638,16 @@ class MoviePage {
 document.addEventListener('DOMContentLoaded', () => {
     const moviePage = new MoviePage();
     moviePage.initializeEventListeners();
+
+    // Set active link based on current page
+    const currentPath = window.location.pathname;
+    const navLinks = document.querySelectorAll('.sidebar .nav-link');
+    
+    navLinks.forEach(link => {
+        if (currentPath.includes(link.getAttribute('href'))) {
+            link.classList.add('active');
+        }
+    });
 });
 
 function toggleSidebar() {
@@ -643,9 +659,11 @@ function toggleSidebar() {
         sidebar.classList.remove("active");
         mainContent.classList.remove("shifted");
         overlay.style.display = "none";
+        document.body.style.overflow = "auto";
     } else {
         sidebar.classList.add("active");
         mainContent.classList.add("shifted");
         overlay.style.display = "block";
+        document.body.style.overflow = "hidden";
     }
 }

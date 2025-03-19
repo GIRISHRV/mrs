@@ -254,6 +254,10 @@ class MovieApp {
                 </div>
             </div>
         `;
+        
+        movieCard.addEventListener('click', () => {
+            window.location.href = `pages/movie-details.html?id=${movie.id}`;
+        });
     }
 
     attachWatchButtonHandlers() {

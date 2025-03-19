@@ -132,13 +132,8 @@ class AuthHandler {
             const password = document.getElementById('login-password').value;
             
             // Form validation
-            if (!email) {
-                this.showToast('Email is required', 'danger');
-                return;
-            }
-            
-            if (!password) {
-                this.showToast('Password is required', 'danger');
+            if (!email || !password) {
+                this.showToast(email ? 'Password is required' : 'Email is required', 'danger');
                 return;
             }
             
@@ -155,14 +150,16 @@ class AuthHandler {
                 this.updateUI();
                 this.loginModalInstance?.hide();
                 this.showToast('Login successful!', 'success');
-                window.location.reload();
+                
+                // Calculate correct path for index.html
+                const basePath = window.location.pathname.includes('/pages/') ? '../' : '';
+                window.location.href = basePath + 'index.html';
             }
         } catch (error) {
             console.error('Login error:', error);
             const errorMessage = error.response?.detail || error.message || 'Login failed';
             this.showToast(errorMessage, 'danger');
         } finally {
-            // Reset button state
             const submitBtn = this.loginForm.querySelector('button[type="submit"]');
             submitBtn.disabled = false;
             submitBtn.innerHTML = 'Login';
@@ -171,71 +168,88 @@ class AuthHandler {
 
     async handleRegister() {
         try {
-            // Access form fields directly from the DOM
-            const registerForm = document.getElementById('register-form');
-            const username = document.getElementById('register-username')?.value.trim();
-            const email = document.getElementById('register-email')?.value.trim();
-            const password = document.getElementById('register-password')?.value;
-            const confirmPassword = document.getElementById('register-confirm-password')?.value;
-            
-            console.log('Registration form fields:', {
-                usernameField: document.getElementById('register-username'),
-                emailField: document.getElementById('register-email'),
-                passwordField: document.getElementById('register-password'),
-                confirmPasswordField: document.getElementById('register-confirm-password')
-            });
-            
-            console.log('Registration form data:', {
-                username: username || '<empty>',
-                email: email || '<empty>',
-                password: password ? '***' : '<empty>',
-                confirmPassword: confirmPassword ? '***' : '<empty>'
-            });
-            
-            // Form validation
-            if (!username) {
-                this.showToast('Username is required', 'danger');
+            const formData = {
+                full_name: document.getElementById('register-fullname')?.value.trim(),
+                age: parseInt(document.getElementById('register-age')?.value),
+                email: document.getElementById('register-email')?.value.trim(),
+                gender: document.getElementById('register-gender')?.value,
+                password: document.getElementById('register-password')?.value,
+                confirmPassword: document.getElementById('register-confirm-password')?.value,
+                location: document.getElementById('register-location')?.value.trim(),
+                marital_status: document.getElementById('register-marital-status')?.value,
+                favorite_countries: document.getElementById('register-countries')?.value.trim(),
+                username: document.getElementById('register-username')?.value.trim()
+            };
+
+            // Validation
+            if (!formData.full_name) {
+                this.showToast('Full name is required', 'danger');
                 return;
             }
-            
-            if (!email) {
+
+            if (!formData.age || formData.age < 13) {
+                this.showToast('Valid age is required (13+)', 'danger');
+                return;
+            }
+
+            if (!formData.email) {
                 this.showToast('Email is required', 'danger');
                 return;
             }
-            
-            if (!password) {
+
+            if (!formData.gender) {
+                this.showToast('Please select a gender', 'danger');
+                return;
+            }
+
+            if (!formData.password) {
                 this.showToast('Password is required', 'danger');
                 return;
             }
-            
-            if (password.length < 6) {
-                this.showToast('Password must be at least 6 characters long', 'danger');
+
+            if (formData.password.length < 6) {
+                this.showToast('Password must be at least 6 characters', 'danger');
                 return;
             }
-            
-            if (password !== confirmPassword) {
+
+            if (formData.password !== formData.confirmPassword) {
                 this.showToast('Passwords do not match', 'danger');
                 return;
             }
-            
+
+            if (!formData.location) {
+                this.showToast('Location is required', 'danger');
+                return;
+            }
+
+            if (!formData.marital_status) {
+                this.showToast('Please select marital status', 'danger');
+                return;
+            }
+
+            if (!formData.favorite_countries) {
+                this.showToast('Please enter favorite countries', 'danger');
+                return;
+            }
+
+            if (!formData.username) {
+                this.showToast('Username is required', 'danger');
+                return;
+            }
+
             // Show loading state
             const submitBtn = this.registerForm.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Loading...';
-            
-            // Add debug info
-            console.log('About to call apiService.register with:', {
-                username,
-                email,
-                password: '***'
-            });
-            
-            const response = await apiService.register(username, email, password);
+
+            // Remove confirm password before sending
+            delete formData.confirmPassword;
+
+            const response = await apiService.register(formData);
             
             this.registerForm.reset();
             this.showToast('Registration successful! Please login.', 'success');
             
-            // Hide register modal and show login modal
             this.registerModalInstance?.hide();
             setTimeout(() => {
                 this.loginModalInstance?.show();
@@ -243,26 +257,8 @@ class AuthHandler {
             
         } catch (error) {
             console.error('Registration error:', error);
-            
-            // Try to extract more detailed error info
-            let errorMessage = 'Registration failed';
-            
-            if (error.response?.detail) {
-                if (Array.isArray(error.response.detail)) {
-                    // Handle pydantic validation errors
-                    errorMessage = error.response.detail.map(err => 
-                        `${err.loc.slice(1).join('.')}: ${err.msg}`
-                    ).join(', ');
-                } else {
-                    errorMessage = error.response.detail;
-                }
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-            
-            this.showToast(errorMessage, 'danger');
+            this.showToast(error.response?.detail || error.message || 'Registration failed', 'danger');
         } finally {
-            // Reset button state
             const submitBtn = this.registerForm.querySelector('button[type="submit"]');
             submitBtn.disabled = false;
             submitBtn.innerHTML = 'Register';
